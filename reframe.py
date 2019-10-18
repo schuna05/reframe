@@ -1,8 +1,10 @@
 import pandas as pd
 import warnings
-warnings.filterwarnings('ignore')
 
-__all__ = ['Relation','GroupWrap']
+warnings.filterwarnings("ignore")
+
+__all__ = ["Relation", "GroupWrap"]
+
 
 class Relation(pd.DataFrame):
     """Create a Relation from a csv file of data for use with relational operators
@@ -22,14 +24,15 @@ class Relation(pd.DataFrame):
 
 
     """
-    def __init__(self, filepath=None, sep='|'):
+
+    def __init__(self, filepath=None, sep="|"):
         if type(filepath) == str:
-            super().__init__(pd.read_csv(filepath,sep=sep))
+            super().__init__(pd.read_csv(filepath, sep=sep))
         elif type(filepath) == pd.DataFrame:
             super().__init__(filepath)
         else:
-            print('help')
-            
+            print("help")
+
     def project(self, cols):
         """returns a new Relation with only the specified columns
 
@@ -57,12 +60,16 @@ class Relation(pd.DataFrame):
         .. note:: Relations have no duplicate rows, so projecting a single column creates a relation with all of the distinct values for that column
         """
         if type(cols) != list:
-            raise ValueError("You must provide the attributes to project inside square brackets []")
+            raise ValueError(
+                "You must provide the attributes to project inside square brackets []"
+            )
         for name in cols:
             if name not in self.columns:
-                raise ValueError("'{}' is not a valid attribute name in relation".format(name))
+                raise ValueError(
+                    "'{}' is not a valid attribute name in relation".format(name)
+                )
         return Relation(self[cols].drop_duplicates())
-    
+
     def query(self, q):
         """return a new relation with tuples matching the query condition
 
@@ -148,7 +155,56 @@ class Relation(pd.DataFrame):
         if sorted(self.columns) != sorted(other.columns):
             raise ValueError("Relations must be Union compatible")
         else:
-            return Relation(pd.merge(self,other,how='inner',on=list(self.columns)))
+            return Relation(pd.merge(self, other, how="inner", on=list(self.columns)))
+
+    def outerjoin(self, other):
+        """Create a new relation that is the Join of two tables with a
+        Completed union filling in the missing (non-matching) records with NULL
+
+
+        In order to compute the intersection the relations must be union compatible.  That is they must
+        have exactly the same columns.  This may require some projecting and renaming.
+        Example:
+        studenttable:
+                SId SName  MajorId  GradYear
+            0    1   joe       10      2004
+            1    2   amy       20      2004
+            2    3   max       10      2005
+            3    4   sue       20      2005
+            4    5   bob       30      2003
+            5    6   kim       20      2005
+            6    7   art       30      2004
+            7    8   pat       20      2001
+            8    9   lee       10      2004
+        enrolltable:
+                EId  SId  SectionId Grade
+            0   14    1         13     A
+            1   24    1         43     C
+            2   34    2         43    B+
+            3   44    4         33     B
+            4   54    4         53     A
+            5   64    6         53     A
+
+        >>> studentable.outerjoin(enrolltable)
+
+                SId SName  MajorId  GradYear   EId  SectionId Grade
+            0     1   joe       10      2004  14.0       13.0     A
+            1     1   joe       10      2004  24.0       43.0     C
+            2     2   amy       20      2004  34.0       43.0    B+
+            3     3   max       10      2005   NaN        NaN   NaN
+            4     4   sue       20      2005  44.0       33.0     B
+            5     4   sue       20      2005  54.0       53.0     A
+            6     5   bob       30      2003   NaN        NaN   NaN
+            7     6   kim       20      2005  64.0       53.0     A
+            8     7   art       30      2004   NaN        NaN   NaN
+            9     8   pat       20      2001   NaN        NaN   NaN
+            10    9   lee       10      2004   NaN        NaN   NaN
+        """
+
+        col_list = [x for x in self.columns if x in other.columns]
+        if not col_list:
+            raise ValueError("The two relations must have some columns in common")
+        return Relation(pd.merge(self, other, how="outer", on=list(col_list)))
 
     def njoin(self, other):
         """Create a new relation that is the intersection of the two given relations
@@ -187,11 +243,9 @@ class Relation(pd.DataFrame):
         col_list = [x for x in self.columns if x in other.columns]
         if not col_list:
             raise ValueError("The two relations must have some columns in common")
-        return Relation(pd.merge(self,other,how='inner',on=list(col_list)))
+        return Relation(pd.merge(self, other, how="inner", on=list(col_list)))
 
-
-
-    def union(self,other):
+    def union(self, other):
         """ Take two Relations with the same columns and put them together top to bottom
 
         :param other:
@@ -235,9 +289,10 @@ class Relation(pd.DataFrame):
         if sorted(self.columns) != sorted(other.columns):
             raise ValueError("Relations must be Union compatible")
         else:
-            return Relation(pd.concat([pd.DataFrame(self),pd.DataFrame(other)]))
+            print(pd.DataFrame(other))
+            return Relation(pd.concat([pd.DataFrame(self), pd.DataFrame(other)]))
 
-    def minus(self,other):
+    def minus(self, other):
         """return a relation containing the rows in self 'but not' in other
 
         :param other:
@@ -295,8 +350,7 @@ class Relation(pd.DataFrame):
         """
         return Relation(self[~self.isin(other).all(1)])
 
-
-    def rename(self,old,new):
+    def rename(self, old, new):
         """Rename old attribute to new
 
         :param old: string, name of old attribute
@@ -316,18 +370,18 @@ class Relation(pd.DataFrame):
         4               Algeria
         >>>
         """
-        return Relation(super().rename(columns={old:new}).drop_duplicates())
+        return Relation(super().rename(columns={old: new}).drop_duplicates())
 
-    def cartesian_product(self,other):
-        self['__cartkey__'] = 1
-        other['__cartkey__'] = 1
-        res = pd.merge(self,other,on='__cartkey__')
-        self.drop('__cartkey__',axis=1,inplace=True)
-        other.drop('__cartkey__',axis=1,inplace=True)
-        res.drop('__cartkey__',axis=1,inplace=True)
+    def cartesian_product(self, other):
+        self["__cartkey__"] = 1
+        other["__cartkey__"] = 1
+        res = pd.merge(self, other, on="__cartkey__")
+        self.drop("__cartkey__", axis=1, inplace=True)
+        other.drop("__cartkey__", axis=1, inplace=True)
+        res.drop("__cartkey__", axis=1, inplace=True)
         return Relation(res.drop_duplicates())
 
-    def groupby(self,cols):
+    def groupby(self, cols):
         """ Collapse a relation containing one row per unique value in the given group by attributes.
 
         The groupby operator is always used in conjunction with an aggregate operator.
@@ -361,9 +415,9 @@ class Relation(pd.DataFrame):
 
         """
         res = super().groupby(cols)
-        return GroupWrap(res,cols)
+        return GroupWrap(res, cols)
 
-    def extend(self,newcol,series):
+    def extend(self, newcol, series):
         """Create a new attribute by combining or modifying one or more existing attributes
 
         :param newcol:  Name of the new column to create
@@ -396,6 +450,7 @@ class Relation(pd.DataFrame):
 class GroupWrap(pd.core.groupby.DataFrameGroupBy):
     """Wrapper for a DataFrameGroupBy object -- invisible to end user
     """
+
     def __init__(self, gbo, cols):
         self.gbo = gbo
         self.gb_cols = cols
@@ -434,8 +489,7 @@ class GroupWrap(pd.core.groupby.DataFrameGroupBy):
 
         """
         res = self.gbo.count()
-        return Relation(self.filteragg(res, col).rename(columns={col:"count_"+col}))
-
+        return Relation(self.filteragg(res, col).rename(columns={col: "count_" + col}))
 
     def mean(self, col):
         """
@@ -462,7 +516,7 @@ class GroupWrap(pd.core.groupby.DataFrameGroupBy):
 
         """
         res = self.gbo.mean()
-        return Relation(self.filteragg(res, col).rename(columns={col:"mean_"+col}))
+        return Relation(self.filteragg(res, col).rename(columns={col: "mean_" + col}))
 
     def min(self, col):
         """
@@ -489,7 +543,7 @@ class GroupWrap(pd.core.groupby.DataFrameGroupBy):
 
         """
         res = self.gbo.min()
-        return Relation(self.filteragg(res, col).rename(columns={col:"min_"+col}))
+        return Relation(self.filteragg(res, col).rename(columns={col: "min_" + col}))
 
     def max(self, col):
         """
@@ -515,7 +569,7 @@ class GroupWrap(pd.core.groupby.DataFrameGroupBy):
 
         """
         res = self.gbo.max()
-        return Relation(self.filteragg(res, col).rename(columns={col:"max_"+col}))
+        return Relation(self.filteragg(res, col).rename(columns={col: "max_" + col}))
 
     def sum(self, col):
         """
@@ -541,7 +595,7 @@ class GroupWrap(pd.core.groupby.DataFrameGroupBy):
 
         """
         res = self.gbo.sum()
-        return Relation(self.filteragg(res, col).rename(columns={col:"sum_"+col}))
+        return Relation(self.filteragg(res, col).rename(columns={col: "sum_" + col}))
 
     def median(self, col):
         """
@@ -567,9 +621,11 @@ class GroupWrap(pd.core.groupby.DataFrameGroupBy):
 
         """
         res = self.gbo.median()
-        return Relation(self.filteragg(res, col).rename(columns={col:"median_"+col}))
+        return Relation(self.filteragg(res, col).rename(columns={col: "median_" + col}))
 
-if __name__ == '__main__':
-    #country = Relation('country.csv')
+
+if __name__ == "__main__":
+    # country = Relation('country.csv')
     import doctest
+
     doctest.testmod()
